@@ -24,6 +24,7 @@ type DashboardData = {
   }[];
   entries: {
     id: string;
+    memberId: string;
     memberName: string;
     amountCents: number;
     type: "deposit" | "withdraw";
@@ -105,6 +106,17 @@ function StatPill({ children }: { children: React.ReactNode }) {
 
 export default function Dashboard({ data }: { data: DashboardData }) {
   const [activeTab, setActiveTab] = useState<string>(tabs[0].id);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
+    data.members[0]?.id ?? null,
+  );
+
+  const selectedMember = data.members.find(
+    (m) => m.id === selectedMemberId,
+  );
+  const selectedEntries =
+    selectedMemberId === null
+      ? []
+      : data.entries.filter((e) => e.memberId === selectedMemberId);
 
   const totalTransactions = data.entries.length;
 
@@ -172,10 +184,13 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           (member.savedCents / target) * 100,
         );
 
+        const isSelected = member.id === selectedMemberId;
+
         return (
-          <div
+          <button
             key={member.id}
-            className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[var(--border)]"
+            onClick={() => setSelectedMemberId(member.id)}
+            className={`flex w-full items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 transition ${isSelected ? "ring-[var(--primary)]" : "ring-[var(--border)] hover:ring-[var(--primary)]/60"}`}
           >
             <Avatar name={member.name} src={member.avatarUrl} />
             <div className="flex-1 space-y-2">
@@ -191,9 +206,65 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                 {formatCurrency(member.targetCents)}
               </p>
             </div>
-          </div>
+          </button>
         );
       })}
+
+      {selectedMember && (
+        <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[var(--primary)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                Detail transaksi {selectedMember.name}
+              </p>
+              <p className="text-xs text-[var(--muted)]">
+                Total setoran: {formatCurrency(selectedMember.savedCents)} /{" "}
+                {formatCurrency(selectedMember.targetCents)}
+              </p>
+            </div>
+            <StatPill>
+              {Math.min(
+                100,
+                selectedMember.targetCents > 0
+                  ? (selectedMember.savedCents / selectedMember.targetCents) *
+                      100
+                  : 0,
+              ).toFixed(0)}
+              %
+            </StatPill>
+          </div>
+
+          {selectedEntries.length === 0 ? (
+            <p className="text-xs text-[var(--muted)]">
+              Belum ada transaksi anggota ini.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {selectedEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-start justify-between rounded-xl border border-[var(--border)] px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {formatCurrency(entry.amountCents)}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {entry.note ?? "Setoran tabungan"}
+                    </p>
+                  </div>
+                  <div className="text-right text-[11px] text-[var(--muted)]">
+                    <p>{formatDate(entry.date)}</p>
+                    <p className="font-semibold text-[var(--primary)]">
+                      {entry.type === "deposit" ? "Deposit" : "Withdraw"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -302,7 +373,15 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             </div>
             <div className="space-y-3">
               {data.members.slice(0, 4).map((member) => (
-                <div key={member.id} className="flex items-center gap-3">
+                <button
+                  key={member.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("members");
+                    setSelectedMemberId(member.id);
+                  }}
+                  className="flex w-full items-center gap-3 text-left"
+                >
                   <Avatar name={member.name} src={member.avatarUrl} />
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
@@ -319,7 +398,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                       {formatCurrency(member.targetCents)}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

@@ -38,6 +38,7 @@ type MemberStat = {
 
 type EntryView = {
   id: string;
+  memberId: string;
   memberName: string;
   amountCents: number;
   type: EntryRow["type"];
@@ -71,7 +72,7 @@ async function loadDashboardData(): Promise<DashboardData | null> {
     .limit(1)
     .maybeSingle();
 
-  let group = groupByName.data;
+  let group: GroupRow | null = groupByName.data;
 
   if (!group) {
     const fallbackGroup = await supabase
@@ -136,6 +137,7 @@ async function loadDashboardData(): Promise<DashboardData | null> {
 
     return {
       id: entry.id,
+      memberId: entry.member_id,
       memberName,
       amountCents: entry.amount_cents,
       type: entry.type,
