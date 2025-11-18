@@ -109,6 +109,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     data.members[0]?.id ?? null,
   );
+  const [showMemberModal, setShowMemberModal] = useState(false);
 
   const selectedMember = data.members.find(
     (m) => m.id === selectedMemberId,
@@ -184,13 +185,14 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           (member.savedCents / target) * 100,
         );
 
-        const isSelected = member.id === selectedMemberId;
-
         return (
           <button
             key={member.id}
-            onClick={() => setSelectedMemberId(member.id)}
-            className={`flex w-full items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 transition ${isSelected ? "ring-[var(--primary)]" : "ring-[var(--border)] hover:ring-[var(--primary)]/60"}`}
+            onClick={() => {
+              setSelectedMemberId(member.id);
+              setShowMemberModal(true);
+            }}
+            className="flex w-full items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-[var(--border)] transition hover:ring-[var(--primary)]/60"
           >
             <Avatar name={member.name} src={member.avatarUrl} />
             <div className="flex-1 space-y-2">
@@ -209,62 +211,6 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           </button>
         );
       })}
-
-      {selectedMember && (
-        <div className="mt-4 space-y-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[var(--primary)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-900">
-                Detail transaksi {selectedMember.name}
-              </p>
-              <p className="text-xs text-[var(--muted)]">
-                Total setoran: {formatCurrency(selectedMember.savedCents)} /{" "}
-                {formatCurrency(selectedMember.targetCents)}
-              </p>
-            </div>
-            <StatPill>
-              {Math.min(
-                100,
-                selectedMember.targetCents > 0
-                  ? (selectedMember.savedCents / selectedMember.targetCents) *
-                      100
-                  : 0,
-              ).toFixed(0)}
-              %
-            </StatPill>
-          </div>
-
-          {selectedEntries.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">
-              Belum ada transaksi anggota ini.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {selectedEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-start justify-between rounded-xl border border-[var(--border)] px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatCurrency(entry.amountCents)}
-                    </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      {entry.note ?? "Setoran tabungan"}
-                    </p>
-                  </div>
-                  <div className="text-right text-[11px] text-[var(--muted)]">
-                    <p>{formatDate(entry.date)}</p>
-                    <p className="font-semibold text-[var(--primary)]">
-                      {entry.type === "deposit" ? "Deposit" : "Withdraw"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 
@@ -377,8 +323,8 @@ export default function Dashboard({ data }: { data: DashboardData }) {
                   key={member.id}
                   type="button"
                   onClick={() => {
-                    setActiveTab("members");
                     setSelectedMemberId(member.id);
+                    setShowMemberModal(true);
                   }}
                   className="flex w-full items-center gap-3 text-left"
                 >
@@ -476,6 +422,99 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           Transaksi
         </button>
       </div>
+
+      {showMemberModal && selectedMember && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/25 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detail transaksi ${selectedMember.name}`}
+          onClick={() => setShowMemberModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-xl ring-1 ring-[var(--border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar name={selectedMember.name} src={selectedMember.avatarUrl} />
+                <div>
+                  <p className="text-base font-semibold text-slate-900">
+                    {selectedMember.name}
+                  </p>
+                  <p className="text-xs text-[var(--muted)]">
+                    Total setoran: {formatCurrency(selectedMember.savedCents)} /{" "}
+                    {formatCurrency(selectedMember.targetCents)}
+                  </p>
+                </div>
+              </div>
+              <button
+                aria-label="Tutup"
+                onClick={() => setShowMemberModal(false)}
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18 18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-3 flex items-center gap-2 text-sm text-[var(--muted)]">
+              <StatPill>
+                {Math.min(
+                  100,
+                  selectedMember.targetCents > 0
+                    ? (selectedMember.savedCents / selectedMember.targetCents) * 100
+                    : 0,
+                ).toFixed(0)}
+                %
+              </StatPill>
+              <span>{selectedEntries.length} transaksi</span>
+            </div>
+
+            {selectedEntries.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">
+                Belum ada transaksi anggota ini.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-auto pr-1">
+                {selectedEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-start justify-between rounded-xl border border-[var(--border)] px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {formatCurrency(entry.amountCents)}
+                      </p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {entry.note ?? "Setoran tabungan"}
+                      </p>
+                    </div>
+                    <div className="text-right text-[11px] text-[var(--muted)]">
+                      <p>{formatDate(entry.date)}</p>
+                      <p className="font-semibold text-[var(--primary)]">
+                        {entry.type === "deposit" ? "Deposit" : "Withdraw"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
