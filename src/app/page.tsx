@@ -63,22 +63,38 @@ type DashboardData = {
 
 async function loadDashboardData(): Promise<DashboardData | null> {
   const supabase = getSupabaseClient();
-  const preferredGroupName = "Liburan";
+  const preferredGroupId = process.env.NEXT_PUBLIC_SAVING_GROUP_ID;
+  const preferredGroupName = "Liburan Jogja";
 
-  const groupByName = await supabase
-    .from("saving_groups")
-    .select("id,name,description,target_total_cents,avatar_url")
-    .eq("name", preferredGroupName)
-    .limit(1)
-    .maybeSingle();
+  let group: GroupRow | null = null;
 
-  let group: GroupRow | null = groupByName.data;
+  if (preferredGroupId) {
+    const groupById = await supabase
+      .from("saving_groups")
+      .select("id,name,description,target_total_cents,avatar_url")
+      .eq("id", preferredGroupId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    group = groupById.data;
+  }
+
+  if (!group && preferredGroupName) {
+    const groupByName = await supabase
+      .from("saving_groups")
+      .select("id,name,description,target_total_cents,avatar_url")
+      .eq("name", preferredGroupName)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    group = groupByName.data;
+  }
 
   if (!group) {
     const fallbackGroup = await supabase
       .from("saving_groups")
       .select("id,name,description,target_total_cents,avatar_url")
-      .order("created_at", { ascending: true })
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
